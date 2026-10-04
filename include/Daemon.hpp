@@ -1,11 +1,15 @@
-#include <filesystem>
 #include "Config.hpp"
+#include "PidFile.hpp"
+
+#include <filesystem>
 
 class Daemon
 {
 private:
     Daemon() = default;
     
+    void initializeConfiguration(const std::filesystem::path& configArgument);
+    void reloadConfig();
     void mainLoop();
     void daemonize();
     static void signalHandler(int signal);
@@ -14,6 +18,7 @@ private:
     std::filesystem::path configPath_;
     std::filesystem::path pidPath_;
     Config config_;
+    PidFile pidFile_;
 
 public:
     Daemon(const Daemon&) = delete;

@@ -9,8 +9,21 @@ Daemon& Daemon::getInstance(){
 
 int Daemon::run(const std::filesystem::path& configArgument){
 
-    configPath_ = std::filesystem::canonical(configArgument);
-    config_ = ConfigLoader::load(configPath_);
-    
+    initializeConfiguration(configArgument);
+
+    pidFile_.acquireLock();
+
+    //daemonize();
+    //openLog()
+    pidFile_.writeCurrentPid();
+    //handler
+    //mainLoop();
+    //shutdown()
     return 0;
 }
+
+void Daemon::initializeConfiguration(const std::filesystem::path& configArgument){
+    configPath_ = std::filesystem::canonical(configArgument);
+    config_ = ConfigLoader::load(configPath_);
+}
+
