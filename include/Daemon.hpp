@@ -1,4 +1,5 @@
 #include <filesystem>
+#include "Config.hpp"
 
 class Daemon
 {
@@ -12,7 +13,7 @@ private:
 
     std::filesystem::path configPath_;
     std::filesystem::path pidPath_;
-
+    Config config_;
 
 public:
     Daemon(const Daemon&) = delete;

@@ -10,5 +10,5 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    return Daemon::getInstance().run(argv[1])
+    return Daemon::getInstance().run(argv[1]);
 }
