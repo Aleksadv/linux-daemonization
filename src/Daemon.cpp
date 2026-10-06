@@ -3,6 +3,9 @@
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cerrno>
+#include <cstring>
+#include <syslog.h>
 
 Daemon& Daemon::getInstance(){
     static Daemon instance;
@@ -15,13 +18,31 @@ int Daemon::run(const std::filesystem::path& configArgument){
 
     pidFile_.acquireLock();
 
-    //daemonize();
-    //openLog()
-    pidFile_.writeCurrentPid();
-    //handler
-    //mainLoop();
+    daemonize();
+
+    openLog(); // открываем системный журнал
+
+    try {
+
+        redirectStandardStreams();
+        
+        pidFile_.writeCurrentPid();
+        //handler
+        //mainLoop();
+    }
+    catch (std::exception& e){
+
+        syslog(LOG_ERR, "Fatal daemon error: %s", e.what());
+
+        pidFile_.release();
+        closelog();
+
+        return EXIT_FAILURE;
+
+        }
+       
     //shutdown()
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 void Daemon::initializeConfiguration(const std::filesystem::path& configArgument){
@@ -38,38 +59,84 @@ void Daemon::daemonize(){
 
     if(pid == -1){
         //fork error
-        exit(EXIT_FAILURE);
+        throw std::runtime_error(
+            std::string("fork failed:")
+            + std::strerror(errno));
+        
     }
 
-    if(pid != 0){
+    if(pid > 0){
         //Старый процесс
-        exit(EXIT_SUCCESS);
+        _exit(EXIT_SUCCESS);
     }
 
     //Задать демону новую группу процессов и сеанс, в котором демон будет ведущим процессом
     if(setsid() < 0){
-       exit(EXIT_FAILURE); 
+
+      throw std::runtime_error(
+            std::string("setsid failed:")
+            + std::strerror(errno));
+         
     }
     //Изменить рабочую директорию на root
-    chdir("/");
-    
+    if(chdir("/") == -1){
+
+        throw std::runtime_error(
+            std::string("chdir failed:")
+            + std::strerror(errno));
+        
+    }
+
+}
+
+void Daemon::openLog(){
+    // открываем системный журнал
+    openlog("my_daemon",LOG_PID,LOG_DAEMON);
+    syslog(LOG_INFO, "Daemon successfully started. PID: %d", static_cast<int>(getpid()));
+}
+
+void Daemon::redirectStandardStreams(){
+
     //открываем файловый дескриптор для перенаправления
     int nullFd = open("/dev/null", O_RDWR);
-    if(nullFd < 0){
-        exit(EXIT_FAILURE);
+
+    if(nullFd == -1){
+       throw std::runtime_error(
+            std::string("open /dev/null failed: ")
+            + std::strerror(errno));
+         
     }
 
     // dup2 автоматически закрывает старый дескриптор
     if(dup2(nullFd, STDIN_FILENO)== -1){
-        //error
+        const int err = errno;
+        if(nullFd > STDERR_FILENO) close(nullFd);
+        
+        throw std::runtime_error(
+            std::string("dup2 stdin failed: ")
+            +std::strerror(err)
+        );
+
     }
     if(dup2(nullFd, STDOUT_FILENO)== -1){
-        //error
+        const int err = errno;
+        if(nullFd > STDERR_FILENO) close(nullFd);
+        
+        throw std::runtime_error(
+            std::string("dup2 stdout failed: ")
+            +std::strerror(err)
+        );
     }
     if(dup2(nullFd, STDERR_FILENO)== -1){
-        //error
+        const int err = errno;
+        if(nullFd > STDERR_FILENO) close(nullFd);
+        
+        throw std::runtime_error(
+            std::string("dup2 stderr failed: ")
+            +std::strerror(err)
+        );
     }
 
-    close(nullFd);
-}
+    if(nullFd > STDERR_FILENO) close(nullFd);
 
+}

@@ -12,6 +12,8 @@ private:
     void reloadConfig();
     void mainLoop();
     void daemonize();
+    void openLog();
+    void redirectStandardStreams();
     static void signalHandler(int signal);
     void shutdown();
 
