@@ -10,5 +10,14 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    return Daemon::getInstance().run(argv[1]);
+    try 
+    {
+
+        return Daemon::getInstance().run(argv[1]);
+    }
+    catch(const std::exception& e){
+
+        std::cerr << "Error: " << e.what() << '\n';
+        return EXIT_FAILURE;
+    }
 }
