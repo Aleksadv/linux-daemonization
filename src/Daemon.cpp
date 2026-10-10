@@ -30,7 +30,7 @@ int Daemon::run(const std::filesystem::path& configArgument){
         //handler
         //mainLoop();
     }
-    catch (std::exception& e){
+    catch (const std::exception& e){
 
         syslog(LOG_ERR, "Fatal daemon error: %s", e.what());
 
@@ -41,7 +41,7 @@ int Daemon::run(const std::filesystem::path& configArgument){
 
         }
        
-    //shutdown()
+    shutdown();
     return EXIT_SUCCESS;
 }
 
@@ -139,4 +139,14 @@ void Daemon::redirectStandardStreams(){
 
     if(nullFd > STDERR_FILENO) close(nullFd);
 
+}
+
+void Daemon::shutdown() noexcept{
+
+    syslog(
+        LOG_INFO, 
+        "Daemon is shutting down"
+        );
+    closelog();
+    pidFile_.release();
 }

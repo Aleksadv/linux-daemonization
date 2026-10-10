@@ -17,7 +17,7 @@ void PidFile::acquireLock(){
     }
 
     //Открытие файла (или создание)
-    int fd_ = open(PidFile::PATH, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+    fd_ = open(PidFile::PATH, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
 
     if(fd_ == -1) {
         throw std::runtime_error(
@@ -91,10 +91,63 @@ void PidFile::terminatePreviousInstance(){
 }
 
 void PidFile::writeCurrentPid(){
+    // получение текущего демона
+    pid_t pid = getpid();
+    std::string pidString = std::to_string(pid);
+    pidString += '\n';
+
+    // сброс позиции в начало файла
+    if (lseek(fd_, 0, SEEK_SET) == -1){
+        throw std::runtime_error(
+            std::string("Cannot seek PID file: ")
+            + std::strerror(errno)
+            );
+    }
+    // усечение файла до нуля перед записью
+    if (ftruncate(fd_, 0) == -1){
+        throw std::runtime_error(
+            std::string("Cannot truncate PID file: ")
+            + std::strerror(errno)
+            );
+    }
+    
+    //Запись всех байт (write может записать меньше или прерваться сигналом)
+    const char* data = pidString.data();
+    size_t total = pidString.size();
+    size_t written = 0;
+
+    while(written < total){
+        ssize_t result = write(fd_, data + written, total - written);
+
+        if(result == -1){
+            if(errno == EINTR){
+                continue; //Прервано сигналом — повторяем
+            }
+            throw std::runtime_error(
+                std::string("Cannot write PID to file: ")
+                + std::strerror(errno)
+                );
+        }
+
+        if(result == 0){
+            // для regular file не должно случаться
+            throw std::runtime_error(
+                "Cannot write PID to file: write returned 0"
+            );
+        }
+
+        written += static_cast<size_t>(result);
+    }
 
 }
 
-void PidFile::remove(){
+void PidFile::release() noexcept{
+    if (fd_ == -1){
+        return;
+    }
+    ftruncate(fd_,0);
+    close(fd_);
+    fd_ = -1;
 
 }
 
