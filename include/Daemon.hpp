@@ -14,6 +14,7 @@ private:
     void mainLoop();
     void daemonize();
     void openLog();
+    void sleepInterval();
     void redirectStandardStreams();
     static void signalHandler(int signal);
     void shutdown();

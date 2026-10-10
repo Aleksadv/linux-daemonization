@@ -1,12 +1,15 @@
 #pragma once
 
-#include <filesystem>
+#include "ReminderEvent.hpp"
+
+#include <vector>
 #include <chrono>
+
 
 struct Config{
 
-    std::filesystem::path sourceDirectory;
-    std::filesystem::path destinationDirectory;
+    //список событий
+    std::vector<ReminderEvent> events;
 
-    std::chrono::seconds interval;
+    std::chrono::seconds interval{10};
 };

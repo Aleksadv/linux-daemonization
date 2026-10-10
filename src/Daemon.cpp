@@ -6,6 +6,7 @@
 #include <cerrno>
 #include <cstring>
 #include <syslog.h>
+#include <ctime>
 
 volatile sig_atomic_t Daemon::terminateRequested_ = 0;
 
@@ -67,7 +68,42 @@ void Daemon::mainLoop(){
         }
 
         // выполнение задачи
-        // sleep (interval)
+        sleepInterval();
+    }
+}
+
+void Daemon::sleepInterval(){
+
+    timespec requested{};
+    requested.tv_sec = config_.interval.count();
+    requested.tv_nsec = 0;
+
+    timespec remaining{};
+
+    while (nanosleep(&requested, &remaining) == -1)
+    {
+        if (errno == EINTR)
+        {
+            // Разбудил сигнал
+            if (terminateRequested_){
+                return;
+            }
+
+            if (reloadRequested_){
+
+                reloadRequested_ = 0;
+                reloadConfig();
+            }
+
+            // досыпает оставшееся время.
+            requested = remaining;
+            continue;
+        }
+
+        throw std::runtime_error(
+            std::string("nanosleep failed: ")
+            + std::strerror(errno)
+        );
     }
 }
 
