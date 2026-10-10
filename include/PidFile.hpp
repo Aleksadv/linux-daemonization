@@ -1,5 +1,7 @@
 #pragma once
 
+#include <sys/types.h>
+
 class PidFile
 {
 private:
@@ -13,7 +15,7 @@ private:
    void terminatePreviousInstance();
 
 public:
-
+    ~PidFile() noexcept;
     void acquireLock();
     void writeCurrentPid();
     void release();

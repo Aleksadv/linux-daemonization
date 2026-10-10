@@ -148,7 +148,6 @@ void PidFile::release() noexcept{
     ftruncate(fd_,0);
     close(fd_);
     fd_ = -1;
-
 }
 
 pid_t PidFile::readPid() const{
@@ -156,8 +155,15 @@ pid_t PidFile::readPid() const{
     if(fd_ == -1){
         throw std::runtime_error("PID file is not opened");
     }
+
     //Чтение файла
-    lseek(fd_, 0, SEEK_SET);
+
+    if(lseek(fd_, 0, SEEK_SET) == -1 ){
+        throw std::runtime_error(
+            std::string("Cannot seek PID file: ")
+            + std::strerror(errno)
+            );
+    }
 
     char buffer[128];
     ssize_t bytes_read = read(fd_, buffer, sizeof(buffer) - 1);
@@ -167,6 +173,12 @@ pid_t PidFile::readPid() const{
         long v = std::strtol(buffer, nullptr, 10);
         if(v > 0){
             return static_cast<pid_t>(v);
+        }
+        else{
+            throw std::runtime_error(
+            std::string("Cannot seek PID file: ")
+            + std::strerror(errno)
+            );
         }
 
     } else if (bytes_read == 0) {
@@ -180,4 +192,11 @@ pid_t PidFile::readPid() const{
         );
     }
 
+}
+
+PidFile::~PidFile()noexcept{
+
+    if(fd_ != -1){
+        close(fd_);
+    }
 }

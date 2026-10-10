@@ -1,6 +1,6 @@
 #include "Config.hpp"
 #include "PidFile.hpp"
-
+#include <csignal>
 #include <filesystem>
 
 class Daemon
@@ -8,6 +8,7 @@ class Daemon
 private:
     Daemon() = default;
     
+    void installSignalHandlers();
     void initializeConfiguration(const std::filesystem::path& configArgument);
     void reloadConfig();
     void mainLoop();
@@ -21,6 +22,9 @@ private:
     std::filesystem::path pidPath_;
     Config config_;
     PidFile pidFile_;
+
+    static volatile sig_atomic_t terminateRequested_;
+    static volatile sig_atomic_t reloadRequested_;
 
 public:
     Daemon(const Daemon&) = delete;

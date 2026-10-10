@@ -7,6 +7,10 @@
 #include <cstring>
 #include <syslog.h>
 
+volatile sig_atomic_t Daemon::terminateRequested_ = 0;
+
+volatile sig_atomic_t Daemon::reloadRequested_ = 0;
+
 Daemon& Daemon::getInstance(){
     static Daemon instance;
     return instance;
@@ -27,15 +31,22 @@ int Daemon::run(const std::filesystem::path& configArgument){
         redirectStandardStreams();
         
         pidFile_.writeCurrentPid();
-        //handler
-        //mainLoop();
+
+        installSignalHandlers();
+
+        syslog(
+            LOG_INFO,
+            "Daemon successfully started. PID: %d", static_cast<int>(getpid())
+            );
+
+        mainLoop();
     }
     catch (const std::exception& e){
 
         syslog(LOG_ERR, "Fatal daemon error: %s", e.what());
 
-        pidFile_.release();
         closelog();
+        pidFile_.release();
 
         return EXIT_FAILURE;
 
@@ -45,11 +56,47 @@ int Daemon::run(const std::filesystem::path& configArgument){
     return EXIT_SUCCESS;
 }
 
+void Daemon::mainLoop(){
+
+    while (!terminateRequested_) // пока не поступит сигнал SIGTERM
+    {
+        if(reloadRequested_){ // поступил сигнал SIGHUP
+
+            reloadRequested_ = 0;
+            reloadConfig(); // 
+        }
+
+        // выполнение задачи
+        // sleep (interval)
+    }
+}
+
 void Daemon::initializeConfiguration(const std::filesystem::path& configArgument){
 
     configPath_ = std::filesystem::canonical(configArgument);
     config_ = ConfigLoader::load(configPath_);
 
+}
+
+void Daemon::reloadConfig(){
+    try
+    {
+        Config newConfig = ConfigLoader::load(configPath_);
+
+        config_ = std::move(newConfig);
+
+        syslog(
+            LOG_INFO,
+            "Configuration successfully reloaded"
+        );
+    }
+    catch (const std::exception& e){
+        syslog(
+            LOG_ERR,
+            "Cannot reload configuration: %s",
+            e.what()
+        );
+    }
 }
 
 void Daemon::daemonize(){
@@ -92,7 +139,7 @@ void Daemon::daemonize(){
 void Daemon::openLog(){
     // открываем системный журнал
     openlog("my_daemon",LOG_PID,LOG_DAEMON);
-    syslog(LOG_INFO, "Daemon successfully started. PID: %d", static_cast<int>(getpid()));
+   
 }
 
 void Daemon::redirectStandardStreams(){
@@ -139,6 +186,33 @@ void Daemon::redirectStandardStreams(){
 
     if(nullFd > STDERR_FILENO) close(nullFd);
 
+}
+
+void Daemon::signalHandler(int signal){
+    if (signal == SIGTERM){
+        terminateRequested_ = 1;
+    }
+    if (signal == SIGHUP){
+        reloadRequested_ = 1;
+    }
+}
+
+void Daemon::installSignalHandlers(){
+
+    struct sigaction action{};
+
+    action.sa_handler = &Daemon::signalHandler;
+
+    sigemptyset(&action.sa_mask);
+
+    action.sa_flags = 0;
+
+    if (sigaction(SIGTERM, &action, nullptr) == -1){
+        throw std::runtime_error("SignalHandler error");
+    }
+    if (sigaction(SIGHUP, &action, nullptr) == -1){
+        throw std::runtime_error("SignalHandler error");
+    }
 }
 
 void Daemon::shutdown() noexcept{
