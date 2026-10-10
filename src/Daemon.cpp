@@ -1,5 +1,7 @@
 #include "Daemon.hpp"
 #include "ConfigLoader.hpp"
+#include "ReminderTask.hpp"
+
 #include <iostream>
 #include <unistd.h>
 #include <fcntl.h>
@@ -68,6 +70,20 @@ void Daemon::mainLoop(){
         }
 
         // выполнение задачи
+        try
+        {
+            reminderTask_.execute(config_);
+        }
+        catch(const std::exception& e)
+        {
+            syslog(
+                LOG_ERR,
+                "Reminder task error: %s",
+                e.what()
+            );
+        }
+        
+
         sleepInterval();
     }
 }
@@ -248,6 +264,22 @@ void Daemon::installSignalHandlers(){
     }
     if (sigaction(SIGHUP, &action, nullptr) == -1){
         throw std::runtime_error("SignalHandler error");
+    }
+
+    struct sigaction childAction{};
+
+    childAction.sa_handler = SIG_IGN;
+
+    sigemptyset(&childAction.sa_mask);
+
+    childAction.sa_flags = SA_NOCLDWAIT;
+
+
+    if ( sigaction(SIGCHLD, &childAction, nullptr) == -1)
+    {
+        throw std::runtime_error(
+            "Cannot install SIGCHLD handler"
+        );
     }
 }
 

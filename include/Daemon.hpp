@@ -1,5 +1,7 @@
 #include "Config.hpp"
 #include "PidFile.hpp"
+#include "ReminderTask.hpp"
+
 #include <csignal>
 #include <filesystem>
 
@@ -23,6 +25,7 @@ private:
     std::filesystem::path pidPath_;
     Config config_;
     PidFile pidFile_;
+    ReminderTask reminderTask_;
 
     static volatile sig_atomic_t terminateRequested_;
     static volatile sig_atomic_t reloadRequested_;
