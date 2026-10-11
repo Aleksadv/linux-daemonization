@@ -19,7 +19,7 @@ private:
     void sleepInterval();
     void redirectStandardStreams();
     static void signalHandler(int signal);
-    void shutdown();
+    void shutdown() noexcept;
 
     std::filesystem::path configPath_;
     std::filesystem::path pidPath_;

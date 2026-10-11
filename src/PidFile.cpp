@@ -176,8 +176,7 @@ pid_t PidFile::readPid() const{
         }
         else{
             throw std::runtime_error(
-            std::string("Cannot seek PID file: ")
-            + std::strerror(errno)
+            "PID file contains invalid PID"
             );
         }
 
@@ -192,6 +191,18 @@ pid_t PidFile::readPid() const{
         );
     }
 
+}
+
+bool PidFile::processExists(pid_t pid) const{
+
+    if(pid <= 0){
+        return false;
+    }
+
+    const std::filesystem::path processPath =
+            std::filesystem::path("/proc") / std::to_string(pid);
+
+    return std::filesystem::exists(processPath);
 }
 
 PidFile::~PidFile()noexcept{

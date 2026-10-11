@@ -34,9 +34,11 @@ fi
 TEXT="$*"
 
 if [ -n "$FLAG" ]; then
-    echo "add_event $DATE $TIME $FLAG $TEXT" >> "$CONFIG_FILE"
+    printf '\nadd_event %s %s %s %s' \
+        "$DATE" "$TIME" "$FLAG" "$TEXT" >> "$CONFIG_FILE"
 else
-    echo "add_event $DATE $TIME $TEXT" >> "$CONFIG_FILE"
+    printf '\nadd_event %s %s %s' \
+        "$DATE" "$TIME" "$TEXT" >> "$CONFIG_FILE"
 fi
 
 echo "Event added"

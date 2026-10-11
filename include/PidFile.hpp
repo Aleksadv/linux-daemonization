@@ -18,6 +18,6 @@ public:
     ~PidFile() noexcept;
     void acquireLock();
     void writeCurrentPid();
-    void release();
+    void release() noexcept;
 };
 
