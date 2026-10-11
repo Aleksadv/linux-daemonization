@@ -27,8 +27,6 @@ int Daemon::run(const std::filesystem::path& configArgument){
 
     daemonize();
 
-    openLog(); // открываем системный журнал
-
     try {
 
         redirectStandardStreams();
@@ -48,7 +46,6 @@ int Daemon::run(const std::filesystem::path& configArgument){
 
         syslog(LOG_ERR, "Fatal daemon error: %s", e.what());
 
-        closelog();
         pidFile_.release();
 
         return EXIT_FAILURE;
@@ -188,12 +185,6 @@ void Daemon::daemonize(){
 
 }
 
-void Daemon::openLog(){
-    // открываем системный журнал
-    openlog("my_daemon",LOG_PID,LOG_DAEMON);
-   
-}
-
 void Daemon::redirectStandardStreams(){
 
     //открываем файловый дескриптор для перенаправления
@@ -289,6 +280,6 @@ void Daemon::shutdown() noexcept{
         LOG_INFO, 
         "Daemon is shutting down"
         );
-    closelog();
+        
     pidFile_.release();
 }
